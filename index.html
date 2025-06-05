@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nested Scratch Card Gift</title>
 <style>
   body {
@@ -64,15 +65,24 @@
     ctx.fillStyle = '#888';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    canvas.addEventListener('mousedown', () => isDrawing = true);
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseleave', () => isDrawing = false);
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (!isDrawing) return;
+    function getXY(e) {
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      } else {
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+    }
+
+    function scratch(e) {
+      if (!isDrawing) return;
+      const { x, y } = getXY(e);
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.arc(x, y, 15, 0, Math.PI * 2);
@@ -80,7 +90,7 @@
       ctx.closePath();
       ctx.globalCompositeOperation = 'source-over';
 
-      // Check how much area is scratched
+      // Check cleared area
       const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
       let cleared = 0;
       for (let i = 0; i < pixels.data.length; i += 4) {
@@ -90,22 +100,38 @@
       if (percentCleared > 50) {
         onReveal();
       }
-    });
+    }
+
+    // Mouse events
+    canvas.addEventListener('mousedown', () => isDrawing = true);
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mouseleave', () => isDrawing = false);
+    canvas.addEventListener('mousemove', scratch);
+
+    // Touch events
+    canvas.addEventListener('touchstart', (e) => {
+      isDrawing = true;
+      scratch(e);
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', () => isDrawing = false);
+    canvas.addEventListener('touchcancel', () => isDrawing = false);
+    canvas.addEventListener('touchmove', scratch, { passive: true });
   }
 
-  // Initialize first scratch card
+  // Show first scratch card
   document.getElementById('firstScratch').style.display = 'flex';
   setupScratchCard('canvas1', () => {
     document.getElementById('firstScratch').style.display = 'none';
     document.getElementById('secondScratch').style.display = 'flex';
   });
 
-  // Initialize second scratch card
   setupScratchCard('canvas2', () => {
     document.getElementById('secondScratch').style.display = 'none';
     document.getElementById('finalMessage').style.display = 'block';
   });
 </script>
+
 
 </body>
 </html>
